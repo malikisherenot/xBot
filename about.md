@@ -16,7 +16,7 @@ It records and replays macros, and loads macros from other bots.
 | `.gdr` / `.gdr2` (xdBot, Mega Hack, Eclipse, Echo, and others) | yes | yes |
 | `.txt` (`frame down [player2] [button]`, optional first line = TPS) | yes | no |
 
-Macros live in the mod save folder under `macros/`.
+Macros live in `geode/game` inside the game directory.
 
 ## Controls
 
