@@ -4,6 +4,7 @@
 #include <Geode/Geode.hpp>
 #include <imgui-cocos.hpp>
 
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
@@ -59,6 +60,9 @@ void applyTheme() {
 	c[ImGuiCol_ScrollbarGrabHovered] = rgb(60, 60, 78);
 	c[ImGuiCol_ScrollbarGrabActive] = rgb(92, 80, 190);
 	c[ImGuiCol_TextSelectedBg] = rgb(92, 80, 190, 0.45f);
+	c[ImGuiCol_ResizeGrip] = rgb(70, 70, 92, 0.85f);
+	c[ImGuiCol_ResizeGripHovered] = rgb(110, 98, 220, 0.9f);
+	c[ImGuiCol_ResizeGripActive] = rgb(140, 126, 255);
 }
 
 void applyStyle() {
@@ -123,16 +127,21 @@ bool gearButton(char const* id, float size) {
 	return pressed;
 }
 
+void setStepper(bool on) {
+	auto& bot = Bot::get();
+	bot.stepper = on;
+	bot.frozen = on;
+	bot.pendingSteps = 0;
+	bot.applyAudio();
+}
+
 void shortcuts() {
 	auto& bot = Bot::get();
 	auto& io = ImGui::GetIO();
 	if (io.WantTextInput) return;
 
 	if (ImGui::IsKeyPressed(ImGuiKey_Tab, false)) bot.menuOpen = !bot.menuOpen;
-	if (ImGui::IsKeyPressed(ImGuiKey_V, false)) {
-		bot.frozen = !bot.frozen;
-		bot.applyAudio();
-	}
+	if (ImGui::IsKeyPressed(ImGuiKey_V, false)) setStepper(!bot.stepper);
 	if (bot.frozen && ImGui::IsKeyPressed(ImGuiKey_C, true)) bot.pendingSteps++;
 }
 
@@ -160,11 +169,12 @@ void floatingButton() {
 	ImVec2 center{origin.x + size * 0.5f, origin.y + size * 0.5f};
 	auto textColor = ImGui::GetColorU32(ImGuiCol_Text);
 	float arm = size * 0.17f;
+	ImVec2 mark{center.x - size * 0.05f, center.y};
 
 	list->AddCircleFilled(center, size * 0.5f, ImGui::GetColorU32(active ? ImGuiCol_ButtonActive : ImGuiCol_Button), 48);
 	list->AddCircle(center, size * 0.5f, ImGui::GetColorU32(ImGuiCol_ButtonHovered), 48, 2.f);
-	list->AddLine({center.x - arm, center.y - arm}, {center.x + arm, center.y + arm}, textColor, size * 0.09f);
-	list->AddLine({center.x - arm, center.y + arm}, {center.x + arm, center.y - arm}, textColor, size * 0.09f);
+	list->AddLine({mark.x - arm, mark.y - arm}, {mark.x + arm, mark.y + arm}, textColor, size * 0.09f);
+	list->AddLine({mark.x - arm, mark.y + arm}, {mark.x + arm, mark.y - arm}, textColor, size * 0.09f);
 
 	if (active && ImGui::IsMouseDragging(0, 8.f)) {
 		auto pos = ImGui::GetWindowPos();
@@ -182,10 +192,10 @@ void floatingButton() {
 
 void stepperControls() {
 	auto& bot = Bot::get();
-	if (!bot.frozen || !bot.inLevel()) return;
+	if (!bot.stepper || !bot.inLevel()) return;
 
 	auto display = ImGui::GetIO().DisplaySize;
-	ImGui::SetNextWindowPos({display.x * 0.5f, display.y - 24.f * scale()}, ImGuiCond_FirstUseEver, {0.5f, 1.f});
+	ImGui::SetNextWindowPos({display.x - 20.f * scale(), display.y - 24.f * scale()}, ImGuiCond_FirstUseEver, {1.f, 1.f});
 	ImGui::SetNextWindowBgAlpha(0.9f);
 	ImGui::Begin(
 		"##xbot-stepper", nullptr,
@@ -203,8 +213,8 @@ void stepperControls() {
 	if (ImGui::Button("+10", size)) bot.pendingSteps += 10;
 
 	ImGui::SameLine();
-	if (ImGui::Button("Play", size)) {
-		bot.frozen = false;
+	if (ImGui::Button(bot.frozen ? "Play" : "Pause", size)) {
+		bot.frozen = !bot.frozen;
 		bot.applyAudio();
 	}
 
@@ -220,20 +230,29 @@ void settings() {
 	if (!bot.menuOpen || !settingsOpen) return;
 
 	ImGui::SetNextWindowPos({120.f, 260.f}, ImGuiCond_FirstUseEver);
-	if (!ImGui::Begin("Settings", &settingsOpen, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
+	if (!ImGui::Begin("Noclip", &settingsOpen, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
 		ImGui::End();
 		return;
 	}
 
-	ImGui::Checkbox("Noclip P1", &bot.noclipP1);
-	ImGui::Checkbox("Noclip P2", &bot.noclipP2);
+	ImGui::Checkbox("Player 1", &bot.noclipP1);
+	ImGui::Checkbox("Player 2", &bot.noclipP2);
 
 	ImGui::End();
 }
 
 void menu() {
 	auto& bot = Bot::get();
-	if (!bot.menuOpen) return;
+	static ImVec2 lastPos;
+	static ImVec2 lastSize;
+	static bool haveRect = false;
+	static bool resizing = false;
+
+	if (!bot.menuOpen) {
+		haveRect = false;
+		resizing = false;
+		return;
+	}
 
 	static char nameBuffer[96] = {};
 	static char speedBuffer[24] = {};
@@ -252,11 +271,50 @@ void menu() {
 		dirty = false;
 	}
 
+	auto& io = ImGui::GetIO();
+	float grip = ImGui::GetFontSize() * 1.75f;
+	if (ImGui::IsMouseClicked(0) && haveRect) {
+		auto mouse = io.MousePos;
+		if (mouse.x >= lastPos.x + lastSize.x - grip && mouse.x <= lastPos.x + lastSize.x &&
+			mouse.y >= lastPos.y + lastSize.y - grip && mouse.y <= lastPos.y + lastSize.y) {
+			resizing = true;
+		}
+	}
+	if (!io.MouseDown[0]) resizing = false;
+
 	ImGui::SetNextWindowPos({100.f, 100.f}, ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize({340.f * scale(), 0.f}, ImGuiCond_FirstUseEver);
-	if (!ImGui::Begin("xBot", &bot.menuOpen, ImGuiWindowFlags_NoCollapse)) {
+	if (resizing && haveRect) {
+		ImGui::SetNextWindowSize({
+			std::max(lastSize.x + io.MouseDelta.x, 240.f * scale()),
+			std::max(lastSize.y + io.MouseDelta.y, 220.f * scale())
+		});
+	}
+	else {
+		ImGui::SetNextWindowSize({340.f * scale(), 0.f}, ImGuiCond_FirstUseEver);
+	}
+
+	auto flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
+	if (resizing) flags |= ImGuiWindowFlags_NoMove;
+	if (!ImGui::Begin("xBot", &bot.menuOpen, flags)) {
+		haveRect = false;
 		ImGui::End();
 		return;
+	}
+
+	{
+		static std::string version = Mod::get()->getVersion().toVString();
+		auto* list = ImGui::GetWindowDrawList();
+		auto pos = ImGui::GetWindowPos();
+		auto size = ImGui::GetWindowSize();
+		float titleHeight = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f;
+		float versionSize = ImGui::GetFontSize() * 0.7f;
+		ImVec2 at{
+			pos.x + size.x * 0.5f + ImGui::CalcTextSize("xBot").x * 0.5f + 6.f * scale(),
+			pos.y + (titleHeight - versionSize) * 0.5f + ImGui::GetFontSize() * 0.06f
+		};
+		list->PushClipRect(pos, {pos.x + size.x, pos.y + titleHeight}, false);
+		list->AddText(ImGui::GetFont(), versionSize, at, ImGui::GetColorU32(ImGuiCol_TextDisabled), version.c_str());
+		list->PopClipRect();
 	}
 
 	static char const* labels[] = {"Idle", "Record", "Replay"};
@@ -267,10 +325,6 @@ void menu() {
 		if (ImGui::Button(labels[i])) bot.setMode(static_cast<Mode>(i));
 		if (active) ImGui::PopStyleColor();
 	}
-
-	float gearSize = ImGui::GetFrameHeight();
-	ImGui::SameLine(ImGui::GetWindowWidth() - gearSize - ImGui::GetStyle().WindowPadding.x);
-	if (gearButton("##settings", gearSize)) settingsOpen = !settingsOpen;
 
 	ImGui::Separator();
 
@@ -287,7 +341,12 @@ void menu() {
 		if (value > 0) bot.setTps(value);
 	}
 
-	if (ImGui::Checkbox("Frame Stepper", &bot.frozen)) bot.applyAudio();
+	bool stepperOn = bot.stepper;
+	if (ImGui::Checkbox("Frame Stepper", &stepperOn)) setStepper(stepperOn);
+
+	ImGui::Checkbox("Noclip", &bot.noclip);
+	ImGui::SameLine();
+	if (gearButton("##noclip-settings", ImGui::GetFrameHeight())) settingsOpen = !settingsOpen;
 
 	if (auto layer = PlayLayer::get()) {
 		ImGui::Text("Frame: %d | Inputs: %zu", layer->m_gameState.m_currentProgress, bot.macro.inputs.size());
@@ -322,6 +381,16 @@ void menu() {
 	}
 
 	if (!status.empty()) ImGui::TextUnformatted(status.c_str());
+
+	lastPos = ImGui::GetWindowPos();
+	lastSize = ImGui::GetWindowSize();
+	haveRect = true;
+
+	ImVec2 corner{lastPos.x + lastSize.x - 3.f * scale(), lastPos.y + lastSize.y - 3.f * scale()};
+	ImGui::GetWindowDrawList()->AddTriangleFilled(
+		corner, {corner.x - grip, corner.y}, {corner.x, corner.y - grip},
+		ImGui::GetColorU32(resizing ? ImGuiCol_ResizeGripActive : ImGuiCol_ResizeGrip)
+	);
 
 	ImGui::End();
 }
