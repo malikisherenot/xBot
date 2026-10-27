@@ -1,4 +1,4 @@
-#include "Bot.hpp"
+#include "../core/Bot.hpp"
 
 #include <Geode/Geode.hpp>
 #include <imgui-cocos.hpp>
