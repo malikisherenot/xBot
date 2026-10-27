@@ -39,6 +39,7 @@ void Bot::setMode(Mode value) {
 	}
 	if (auto layer = PlayLayer::get()) {
 		rewind(layer->m_gameState.m_currentProgress);
+		restart = value != Mode::Idle;
 	}
 	else {
 		m_cursor = 0;
@@ -123,7 +124,7 @@ void Bot::inject(GJBaseGameLayer* layer, uint32_t frame) {
 }
 
 std::filesystem::path Bot::dir() const {
-	auto path = Mod::get()->getSaveDir() / "macros";
+	auto path = geode::dirs::getGeodeDir() / "game";
 	std::error_code ec;
 	std::filesystem::create_directories(path, ec);
 	return path;

@@ -37,6 +37,7 @@ public:
 	bool noclipP1 = true;
 	bool noclipP2 = true;
 	bool injecting = false;
+	bool restart = false;
 	int pendingSteps = 0;
 	double accumulator = 0.0;
 	std::string name = "macro";
