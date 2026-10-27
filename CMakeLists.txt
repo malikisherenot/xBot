@@ -17,8 +17,6 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 CPMAddPackage("gh:matcool/gd-imgui-cocos#geode")
 CPMAddPackage("gh:maxnut/GDReplayFormat#gdr2")
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchImguiCocos.cmake")
-
 target_link_libraries(${PROJECT_NAME} imgui-cocos libGDR)
 
 setup_geode_mod(${PROJECT_NAME})
