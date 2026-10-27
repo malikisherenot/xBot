@@ -1,4 +1,4 @@
-#include "Bot.hpp"
+#include "../core/Bot.hpp"
 
 #include <Geode/modify/CCScheduler.hpp>
 #include <Geode/modify/GJBaseGameLayer.hpp>
