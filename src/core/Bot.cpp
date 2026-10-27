@@ -1,5 +1,5 @@
 #include "Bot.hpp"
-#include "src/formats/Formats.hpp"
+#include "../formats/Formats.hpp"
 
 #include <algorithm>
 
