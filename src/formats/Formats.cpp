@@ -11,7 +11,7 @@
 
 namespace {
 
-struct GInput : gdr::Input<GInput> {
+struct GInput : gdr::Input<"xBot"> {
 	GInput() = default;
 	GInput(int frame, int button, bool player2, bool down) : Input(frame, button, player2, down) {}
 };
@@ -118,7 +118,7 @@ bool load(std::filesystem::path const& path, Macro& out) {
 bool save(std::filesystem::path const& path, Macro const& macro, int levelId, std::string const& levelName) {
 	GReplay replay;
 	replay.framerate = macro.tps;
-	replay.gameVersion = 2.2081;
+	replay.gameVersion = 22081;
 	replay.levelInfo.id = levelId;
 	replay.levelInfo.name = levelName;
 	replay.duration = macro.inputs.empty() ? 0.f : static_cast<float>(macro.inputs.back().frame) / macro.tps;
@@ -126,7 +126,10 @@ bool save(std::filesystem::path const& path, Macro const& macro, int levelId, st
 		replay.inputs.emplace_back(static_cast<int>(input.frame), input.button, input.player2, input.down);
 	}
 
-	auto data = replay.exportData();
+	auto result = replay.exportData();
+	if (!result.isOk()) return false;
+	auto data = std::move(result).unwrap();
+
 	std::ofstream file(path, std::ios::binary);
 	if (!file) return false;
 	file.write(reinterpret_cast<char const*>(data.data()), static_cast<std::streamsize>(data.size()));
