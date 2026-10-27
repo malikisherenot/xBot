@@ -1,4 +1,4 @@
-# xBOT
+# xBot
 
 ~ A minimalistic bot made and for botters.
 
