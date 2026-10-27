@@ -1,0 +1,13 @@
+{
+	"geode": "5.11.2",
+	"gd": {
+		"win": "2.2081",
+		"android": "2.2081"
+	},
+	"id": "itzmalikhere.xbot",
+	"name": "xBot",
+	"version": "v1.0.0",
+	"developer": "itzmalikhere",
+	"description": "Minimal high-accuracy bot: speedhack, TPS and frame stepper with support for other bot formats.",
+	"tags": ["utility", "gameplay", "enhancement"]
+}
