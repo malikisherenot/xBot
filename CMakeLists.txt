@@ -15,7 +15,7 @@ endif()
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
 CPMAddPackage("gh:matcool/gd-imgui-cocos#main")
-CPMAddPackage("gh:maxnut/GDReplayFormat#main")
+CPMAddPackage("gh:maxnut/GDReplayFormat#master")
 
 target_link_libraries(${PROJECT_NAME} imgui-cocos gdr)
 
