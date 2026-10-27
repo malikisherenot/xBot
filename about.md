@@ -1,10 +1,11 @@
 # xBot
 
-A tiny, high-accuracy bot with only three tools:
+A tiny, high-accuracy bot with only a few tools:
 
 - **Speedhack** (audio pitch follows the speed)
 - **TPS** (fixed physics step, default 240)
-- **Frame Stepper**
+- **Frame Stepper** (on-screen Step, +10 and Play controls on mobile)
+- **Noclip** for P1 and P2 (gear icon in the menu)
 
 It records and replays macros, and loads macros from other bots.
 
@@ -20,4 +21,4 @@ Macros live in the mod save folder under `macros/`.
 ## Controls
 
 - Windows: `Tab` menu, `V` toggle stepper, `C` step
-- Android: tap the floating **xBot** button (drag to move it)
+- Android: tap the floating **X** button (drag to move it)

@@ -6,8 +6,8 @@
 	},
 	"id": "itzmalikhere.xbot",
 	"name": "xBot",
-	"version": "v1.0.0",
+	"version": "v1.1.0",
 	"developer": "itzmalikhere",
-	"description": "Minimal high-accuracy bot: speedhack, TPS and frame stepper with support for other bot formats.",
+	"description": "Minimal high-accuracy bot: speedhack, TPS, frame stepper and noclip, with support for other bot formats.",
 	"tags": ["utility", "gameplay", "enhancement"]
 }
