@@ -1,6 +1,4 @@
 # Compatibility patch for matcool/gd-imgui-cocos against the Geode Cocos
-# callback signatures present in the build logs. This modifies only CPM's
-# fetched dependency source in the build tree, not the upstream repository.
 
 if (NOT DEFINED gd-imgui-cocos_SOURCE_DIR OR NOT EXISTS "${gd-imgui-cocos_SOURCE_DIR}/include/imgui-cocos.hpp")
     message(FATAL_ERROR "Could not locate the fetched gd-imgui-cocos source directory")
