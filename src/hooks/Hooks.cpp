@@ -79,7 +79,7 @@ class $modify(XPlayLayer, PlayLayer) {
 
 	void destroyPlayer(PlayerObject* player, GameObject* object) {
 		auto& bot = Bot::get();
-		if (object != m_anticheatSpike) {
+		if (bot.noclip && object != m_anticheatSpike) {
 			if (player == m_player1 && bot.noclipP1) return;
 			if (player == m_player2 && bot.noclipP2) return;
 		}
