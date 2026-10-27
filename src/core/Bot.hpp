@@ -32,8 +32,10 @@ public:
 	float tps = 240.f;
 	bool frozen = false;
 	bool menuOpen = false;
-	bool noclipP1 = false;
-	bool noclipP2 = false;
+	bool stepper = false;
+	bool noclip = false;
+	bool noclipP1 = true;
+	bool noclipP2 = true;
 	bool injecting = false;
 	int pendingSteps = 0;
 	double accumulator = 0.0;
