@@ -9,7 +9,7 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 if (NOT DEFINED ENV{GEODE_SDK})
-	message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
+    message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
 endif()
 
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
@@ -17,6 +17,11 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 CPMAddPackage("gh:matcool/gd-imgui-cocos#main")
 CPMAddPackage("gh:maxnut/GDReplayFormat#gdr2")
 
-target_link_libraries(${PROJECT_NAME} imgui-cocos gdr)
+# The current Geode Cocos headers changed several callback signatures used by
+# gd-imgui-cocos. Patch the fetched dependency before its sources are compiled.
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchImguiCocos.cmake")
+
+# GDReplayFormat's exported CMake target is libGDR (not gdr).
+target_link_libraries(${PROJECT_NAME} imgui-cocos libGDR)
 
 setup_geode_mod(${PROJECT_NAME})
