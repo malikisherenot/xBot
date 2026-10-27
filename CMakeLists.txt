@@ -17,11 +17,8 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 CPMAddPackage("gh:matcool/gd-imgui-cocos#main")
 CPMAddPackage("gh:maxnut/GDReplayFormat#gdr2")
 
-# The current Geode Cocos headers changed several callback signatures used by
-# gd-imgui-cocos. Patch the fetched dependency before its sources are compiled.
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchImguiCocos.cmake")
 
-# GDReplayFormat's exported CMake target is libGDR (not gdr).
 target_link_libraries(${PROJECT_NAME} imgui-cocos libGDR)
 
 setup_geode_mod(${PROJECT_NAME})
