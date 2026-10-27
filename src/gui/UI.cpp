@@ -1,4 +1,5 @@
 #include "../core/Bot.hpp"
+#include "FontData.hpp"
 
 #include <Geode/Geode.hpp>
 #include <imgui-cocos.hpp>
@@ -24,18 +25,56 @@ float scale() {
 #endif
 }
 
+ImVec4 rgb(int r, int g, int b, float a = 1.f) {
+	return {r / 255.f, g / 255.f, b / 255.f, a};
+}
+
+void applyTheme() {
+	auto& style = ImGui::GetStyle();
+	auto& c = style.Colors;
+
+	c[ImGuiCol_Text] = rgb(230, 230, 236);
+	c[ImGuiCol_TextDisabled] = rgb(120, 120, 132);
+	c[ImGuiCol_WindowBg] = rgb(13, 13, 16, 0.97f);
+	c[ImGuiCol_PopupBg] = rgb(18, 18, 22);
+	c[ImGuiCol_Border] = rgb(38, 38, 48);
+	c[ImGuiCol_FrameBg] = rgb(22, 22, 28);
+	c[ImGuiCol_FrameBgHovered] = rgb(30, 30, 38);
+	c[ImGuiCol_FrameBgActive] = rgb(38, 38, 50);
+	c[ImGuiCol_TitleBg] = rgb(9, 9, 11);
+	c[ImGuiCol_TitleBgActive] = rgb(17, 17, 21);
+	c[ImGuiCol_TitleBgCollapsed] = rgb(9, 9, 11);
+	c[ImGuiCol_CheckMark] = rgb(140, 126, 255);
+	c[ImGuiCol_SliderGrab] = rgb(110, 98, 220);
+	c[ImGuiCol_SliderGrabActive] = rgb(140, 126, 255);
+	c[ImGuiCol_Button] = rgb(30, 30, 38);
+	c[ImGuiCol_ButtonHovered] = rgb(44, 44, 58);
+	c[ImGuiCol_ButtonActive] = rgb(92, 80, 190);
+	c[ImGuiCol_Header] = rgb(30, 30, 38);
+	c[ImGuiCol_HeaderHovered] = rgb(44, 44, 58);
+	c[ImGuiCol_HeaderActive] = rgb(92, 80, 190);
+	c[ImGuiCol_Separator] = rgb(38, 38, 48);
+	c[ImGuiCol_ScrollbarBg] = rgb(13, 13, 16);
+	c[ImGuiCol_ScrollbarGrab] = rgb(44, 44, 58);
+	c[ImGuiCol_ScrollbarGrabHovered] = rgb(60, 60, 78);
+	c[ImGuiCol_ScrollbarGrabActive] = rgb(92, 80, 190);
+	c[ImGuiCol_TextSelectedBg] = rgb(92, 80, 190, 0.45f);
+}
+
 void applyStyle() {
 	auto& io = ImGui::GetIO();
 
-	auto fontPath = Mod::get()->getResourcesDir() / "arial-italic.ttf";
-	std::error_code ec;
-	if (std::filesystem::exists(fontPath, ec)) {
-		if (auto font = io.Fonts->AddFontFromFileTTF(utils::string::pathToString(fontPath).c_str(), 16.f)) {
-			io.FontDefault = font;
-		}
+	ImFontConfig config;
+	config.FontDataOwnedByAtlas = false;
+	if (auto font = io.Fonts->AddFontFromMemoryTTF(
+			const_cast<unsigned char*>(arialItalic), static_cast<int>(arialItalicSize), 16.f, &config
+		)) {
+		io.FontDefault = font;
 	}
 
 	ImGui::StyleColorsDark();
+	applyTheme();
+
 	auto& style = ImGui::GetStyle();
 	style.WindowRounding = 8.f;
 	style.FrameRounding = 6.f;
@@ -101,7 +140,7 @@ void floatingButton() {
 #ifdef GEODE_IS_ANDROID
 	auto& bot = Bot::get();
 	static bool dragged = false;
-	float size = 56.f * scale();
+	float size = 36.f * scale();
 
 	ImGui::SetNextWindowPos({20.f, 120.f}, ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowBgAlpha(0.f);
@@ -119,13 +158,13 @@ void floatingButton() {
 
 	auto* list = ImGui::GetWindowDrawList();
 	ImVec2 center{origin.x + size * 0.5f, origin.y + size * 0.5f};
+	auto textColor = ImGui::GetColorU32(ImGuiCol_Text);
+	float arm = size * 0.17f;
+
 	list->AddCircleFilled(center, size * 0.5f, ImGui::GetColorU32(active ? ImGuiCol_ButtonActive : ImGuiCol_Button), 48);
 	list->AddCircle(center, size * 0.5f, ImGui::GetColorU32(ImGuiCol_ButtonHovered), 48, 2.f);
-	auto textSize = ImGui::CalcTextSize("xBot");
-	list->AddText(
-		{center.x - textSize.x * 0.5f, center.y - textSize.y * 0.5f},
-		ImGui::GetColorU32(ImGuiCol_Text), "xBot"
-	);
+	list->AddLine({center.x - arm, center.y - arm}, {center.x + arm, center.y + arm}, textColor, size * 0.09f);
+	list->AddLine({center.x - arm, center.y + arm}, {center.x + arm, center.y - arm}, textColor, size * 0.09f);
 
 	if (active && ImGui::IsMouseDragging(0, 8.f)) {
 		auto pos = ImGui::GetWindowPos();
@@ -139,6 +178,41 @@ void floatingButton() {
 	ImGui::End();
 	ImGui::PopStyleVar(2);
 #endif
+}
+
+void stepperControls() {
+	auto& bot = Bot::get();
+	if (!bot.frozen || !bot.inLevel()) return;
+
+	auto display = ImGui::GetIO().DisplaySize;
+	ImGui::SetNextWindowPos({display.x * 0.5f, display.y - 24.f * scale()}, ImGuiCond_FirstUseEver, {0.5f, 1.f});
+	ImGui::SetNextWindowBgAlpha(0.9f);
+	ImGui::Begin(
+		"##xbot-stepper", nullptr,
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings
+	);
+
+	ImVec2 size{72.f * scale(), 40.f * scale()};
+
+	ImGui::PushButtonRepeat(true);
+	if (ImGui::Button("Step", size)) bot.pendingSteps++;
+	ImGui::PopButtonRepeat();
+
+	ImGui::SameLine();
+	if (ImGui::Button("+10", size)) bot.pendingSteps += 10;
+
+	ImGui::SameLine();
+	if (ImGui::Button("Play", size)) {
+		bot.frozen = false;
+		bot.applyAudio();
+	}
+
+	if (auto layer = PlayLayer::get()) {
+		ImGui::Text("Frame: %d", layer->m_gameState.m_currentProgress);
+	}
+
+	ImGui::End();
 }
 
 void settings() {
@@ -214,12 +288,6 @@ void menu() {
 	}
 
 	if (ImGui::Checkbox("Frame Stepper", &bot.frozen)) bot.applyAudio();
-	if (bot.frozen) {
-		ImGui::SameLine();
-		ImGui::PushButtonRepeat(true);
-		if (ImGui::Button("Step")) bot.pendingSteps++;
-		ImGui::PopButtonRepeat();
-	}
 
 	if (auto layer = PlayLayer::get()) {
 		ImGui::Text("Frame: %d | Inputs: %zu", layer->m_gameState.m_currentProgress, bot.macro.inputs.size());
@@ -265,6 +333,7 @@ $on_mod(Loaded) {
 	ImGuiCocos::get().setup(applyStyle).draw([] {
 		shortcuts();
 		floatingButton();
+		stepperControls();
 		menu();
 		settings();
 	});
