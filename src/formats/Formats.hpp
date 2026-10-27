@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Bot.hpp"
+#include "src/core/Bot.hpp"
 
 #include <filesystem>
 #include <string>
