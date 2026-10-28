@@ -1,17 +1,30 @@
 #pragma once
 
-#include "Fields.hpp"
+#include "PlayerFields.hpp"
 
 #include <Geode/Geode.hpp>
 
 #include <type_traits>
+#include <utility>
 
 namespace xbot::practice {
+
+namespace detail {
+
+struct Missing {};
+
+#define X(name) \
+	template <class P> auto type_##name(int) -> std::decay_t<decltype(std::declval<P&>().name)>; \
+	template <class P> Missing type_##name(...);
+XBOT_PLAYER_FIELDS(X)
+#undef X
+
+}
 
 struct PlayerData {
 	cocos2d::CCPoint position;
 	float rotation = 0.f;
-#define X(name) std::decay_t<decltype(PlayerObject::name)> name{};
+#define X(name) decltype(detail::type_##name<PlayerObject>(0)) name{};
 	XBOT_PLAYER_FIELDS(X)
 #undef X
 };
