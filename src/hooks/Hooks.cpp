@@ -1,4 +1,5 @@
 #include "../core/Bot.hpp"
+#include "../practice/Practice.hpp"
 
 #include <Geode/modify/CCScheduler.hpp>
 #include <Geode/modify/GJBaseGameLayer.hpp>
@@ -85,15 +86,27 @@ class $modify(XGameLayer, GJBaseGameLayer) {
 		return applied;
 	}
 
-	void handleButton(bool down, int button, bool isPlayer1) {
+	void processQueuedButtons(float dt, bool clearInputQueue) {
 		auto& bot = Bot::get();
-		if (!m_isEditor && bot.inLevel()) {
-			if (bot.mode == Mode::Replay && !bot.injecting) return;
-			if (bot.mode == Mode::Record && !bot.resetting && m_player1 && !m_player1->m_isDead) {
-				bot.record(static_cast<uint32_t>(m_gameState.m_currentProgress), button, down, !isPlayer1);
+		if (m_isEditor || !bot.inLevel() || bot.mode == Mode::Idle) {
+			GJBaseGameLayer::processQueuedButtons(dt, clearInputQueue);
+			return;
+		}
+
+		auto frame = static_cast<uint32_t>(m_gameState.m_currentProgress);
+		bool alive = m_player1 && !m_player1->m_isDead && !m_levelEndAnimationStarted;
+
+		if (bot.mode == Mode::Replay) {
+			m_queuedButtons.clear();
+			if (alive) bot.inject(this, frame);
+		}
+		else if (bot.mode == Mode::Record && alive && !bot.resetting) {
+			for (auto const& command : m_queuedButtons) {
+				bot.record(frame, static_cast<int>(command.m_button), command.m_isPush, command.m_isPlayer2);
 			}
 		}
-		GJBaseGameLayer::handleButton(down, button, isPlayer1);
+
+		GJBaseGameLayer::processQueuedButtons(dt, clearInputQueue);
 	}
 
 	void processCommands(float dt, bool isHalfTick, bool isLastTick) {
@@ -103,9 +116,6 @@ class $modify(XGameLayer, GJBaseGameLayer) {
 				bot.restart = false;
 				PlayLayer::get()->resetLevelFromStart();
 				return;
-			}
-			if (bot.mode == Mode::Replay) {
-				bot.inject(this, static_cast<uint32_t>(m_gameState.m_currentProgress));
 			}
 		}
 		GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
@@ -122,12 +132,27 @@ class $modify(XPlayLayer, PlayLayer) {
 		bot.accumulator = 0.0;
 		bot.rewind(static_cast<uint32_t>(m_gameState.m_currentProgress));
 		bot.applyAudio();
+
+		if (bot.mode == Mode::Record && m_uiLayer && m_player1) {
+			bool twoPlayer = m_levelSettings->m_twoPlayerMode;
+			bool holding1 = m_uiLayer->m_p1Jumping || m_uiLayer->m_p1TouchId != -1;
+			bool holding2 = m_uiLayer->m_p2Jumping || m_uiLayer->m_p2TouchId != -1;
+			holding1 = holding1 || (holding2 && !twoPlayer);
+
+			if (holding1 != m_player1->m_holdingButtons[1]) {
+				queueButton(1, holding1, false, 0.0);
+			}
+			if (twoPlayer && m_player2 && holding2 != m_player2->m_holdingButtons[1]) {
+				queueButton(1, holding2, true, 0.0);
+			}
+		}
 	}
 
 	void onQuit() {
 		auto& bot = Bot::get();
 		bot.autosave();
 		bot.resetAudio();
+		xbot::practice::clear();
 		PlayLayer::onQuit();
 	}
 
