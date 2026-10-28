@@ -36,7 +36,6 @@ public:
 	bool noclip = false;
 	bool noclipP1 = true;
 	bool noclipP2 = true;
-	bool injecting = false;
 	bool restart = false;
 	bool resetting = false;
 	int pendingSteps = 0;
@@ -66,7 +65,6 @@ public:
 
 private:
 	size_t m_cursor = 0;
-	bool m_resync = false;
 
 	void press(GJBaseGameLayer* layer, bool down, int button, bool player2);
 };

@@ -73,6 +73,10 @@ void Bot::resetAudio() {
 }
 
 void Bot::record(uint32_t frame, int button, bool down, bool player2) {
+	if (!macro.inputs.empty()) {
+		auto const& last = macro.inputs.back();
+		if (last.frame == frame && last.button == button && last.down == down && last.player2 == player2) return;
+	}
 	macro.inputs.push_back({frame, button, down, player2});
 }
 
@@ -89,33 +93,14 @@ void Bot::rewind(uint32_t frame) {
 		[](Input const& input, uint32_t value) { return input.frame < value; }
 	);
 	m_cursor = static_cast<size_t>(it - inputs.begin());
-	m_resync = true;
 }
 
 void Bot::press(GJBaseGameLayer* layer, bool down, int button, bool player2) {
-	injecting = true;
-	layer->handleButton(down, button, !player2);
-	injecting = false;
+	layer->queueButton(button, down, player2, 0.0);
 }
 
 void Bot::inject(GJBaseGameLayer* layer, uint32_t frame) {
 	auto& inputs = macro.inputs;
-
-	if (m_resync) {
-		m_resync = false;
-		bool held[4][2] = {};
-		for (size_t i = 0; i < m_cursor && i < inputs.size(); i++) {
-			auto const& input = inputs[i];
-			if (input.button >= 1 && input.button <= 3) {
-				held[input.button][input.player2 ? 1 : 0] = input.down;
-			}
-		}
-		for (int button = 1; button <= 3; button++) {
-			for (int side = 0; side < 2; side++) {
-				if (held[button][side]) press(layer, true, button, side == 1);
-			}
-		}
-	}
 
 	while (m_cursor < inputs.size() && inputs[m_cursor].frame <= frame) {
 		auto const& input = inputs[m_cursor++];
