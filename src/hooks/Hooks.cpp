@@ -89,7 +89,7 @@ class $modify(XGameLayer, GJBaseGameLayer) {
 		auto& bot = Bot::get();
 		if (!m_isEditor && bot.inLevel()) {
 			if (bot.mode == Mode::Replay && !bot.injecting) return;
-			if (bot.mode == Mode::Record) {
+			if (bot.mode == Mode::Record && !bot.resetting && m_player1 && !m_player1->m_isDead) {
 				bot.record(static_cast<uint32_t>(m_gameState.m_currentProgress), button, down, !isPlayer1);
 			}
 		}
@@ -114,8 +114,10 @@ class $modify(XGameLayer, GJBaseGameLayer) {
 
 class $modify(XPlayLayer, PlayLayer) {
 	void resetLevel() {
-		PlayLayer::resetLevel();
 		auto& bot = Bot::get();
+		bot.resetting = true;
+		PlayLayer::resetLevel();
+		bot.resetting = false;
 		m_extraDelta = 0.0;
 		bot.accumulator = 0.0;
 		bot.rewind(static_cast<uint32_t>(m_gameState.m_currentProgress));
@@ -123,8 +125,20 @@ class $modify(XPlayLayer, PlayLayer) {
 	}
 
 	void onQuit() {
-		Bot::get().resetAudio();
+		auto& bot = Bot::get();
+		bot.autosave();
+		bot.resetAudio();
 		PlayLayer::onQuit();
+	}
+
+	void levelComplete() {
+		Bot::get().autosave();
+		PlayLayer::levelComplete();
+	}
+
+	void togglePracticeMode(bool practice) {
+		if (!practice) Bot::get().autosave();
+		PlayLayer::togglePracticeMode(practice);
 	}
 
 	void destroyPlayer(PlayerObject* player, GameObject* object) {
