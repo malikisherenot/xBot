@@ -1,4 +1,5 @@
 #include "Formats.hpp"
+#include "Slc.hpp"
 
 #include <gdr/gdr.hpp>
 
@@ -99,19 +100,52 @@ bool loadText(std::filesystem::path const& path, xbot::Macro& out) {
 	return !out.inputs.empty();
 }
 
+bool loadSlc(std::filesystem::path const& path, xbot::Macro& out) {
+	std::vector<uint8_t> data;
+	if (!readBytes(path, data)) return false;
+
+	xbot::slc::Replay replay;
+	if (!xbot::slc::parse(data, replay)) return false;
+
+	out.tps = replay.tps > 0.0 ? static_cast<float>(replay.tps) : 240.f;
+	out.inputs.clear();
+
+	bool newAttempt = false;
+	for (auto const& action : replay.actions) {
+		if (action.type == 5) {
+			newAttempt = true;
+			continue;
+		}
+		if (action.type < 1 || action.type > 3 || action.frame > UINT32_MAX) continue;
+
+		if (newAttempt) {
+			out.inputs.clear();
+			newAttempt = false;
+		}
+
+		auto frame = static_cast<uint32_t>(action.frame);
+		while (!out.inputs.empty() && out.inputs.back().frame > frame) {
+			out.inputs.pop_back();
+		}
+		out.inputs.push_back({frame, action.type, action.holding, action.player2});
+	}
+	return !out.inputs.empty();
+}
+
 }
 
 namespace xbot::formats {
 
 bool supported(std::filesystem::path const& path) {
 	auto ext = extensionOf(path);
-	return ext == ".gdr" || ext == ".gdr2" || ext == ".txt";
+	return ext == ".gdr" || ext == ".gdr2" || ext == ".txt" || ext == ".slc";
 }
 
 bool load(std::filesystem::path const& path, Macro& out) {
 	auto ext = extensionOf(path);
 	if (ext == ".gdr" || ext == ".gdr2") return loadGdr(path, out);
 	if (ext == ".txt") return loadText(path, out);
+	if (ext == ".slc") return loadSlc(path, out);
 	return false;
 }
 
