@@ -16,6 +16,7 @@ using namespace xbot;
 
 namespace {
 
+bool noclipOpen = false;
 bool settingsOpen = false;
 
 float scale() {
@@ -148,17 +149,23 @@ void shortcuts() {
 void floatingButton() {
 #ifdef GEODE_IS_ANDROID
 	auto& bot = Bot::get();
-	static bool dragged = false;
+	auto& io = ImGui::GetIO();
+	static ImVec2 position{20.f, 120.f};
+	static bool dragging = false;
 	float size = 36.f * scale();
 
-	ImGui::SetNextWindowPos({20.f, 120.f}, ImGuiCond_FirstUseEver);
+	position.x = std::clamp(position.x, 0.f, std::max(0.f, io.DisplaySize.x - size));
+	position.y = std::clamp(position.y, 0.f, std::max(0.f, io.DisplaySize.y - size));
+
+	ImGui::SetNextWindowPos(position);
 	ImGui::SetNextWindowBgAlpha(0.f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {0.f, 0.f});
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
 	ImGui::Begin(
 		"##xbot-button", nullptr,
-		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar |
-			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize |
+			ImGuiWindowFlags_NoSavedSettings
 	);
 
 	auto origin = ImGui::GetCursorScreenPos();
@@ -169,21 +176,19 @@ void floatingButton() {
 	ImVec2 center{origin.x + size * 0.5f, origin.y + size * 0.5f};
 	auto textColor = ImGui::GetColorU32(ImGuiCol_Text);
 	float arm = size * 0.17f;
-	ImVec2 mark{center.x - size * 0.05f, center.y};
 
 	list->AddCircleFilled(center, size * 0.5f, ImGui::GetColorU32(active ? ImGuiCol_ButtonActive : ImGuiCol_Button), 48);
 	list->AddCircle(center, size * 0.5f, ImGui::GetColorU32(ImGuiCol_ButtonHovered), 48, 2.f);
-	list->AddLine({mark.x - arm, mark.y - arm}, {mark.x + arm, mark.y + arm}, textColor, size * 0.09f);
-	list->AddLine({mark.x - arm, mark.y + arm}, {mark.x + arm, mark.y - arm}, textColor, size * 0.09f);
+	list->AddLine({center.x - arm, center.y - arm}, {center.x + arm, center.y + arm}, textColor, size * 0.09f);
+	list->AddLine({center.x - arm, center.y + arm}, {center.x + arm, center.y - arm}, textColor, size * 0.09f);
 
 	if (active && ImGui::IsMouseDragging(0, 8.f)) {
-		auto pos = ImGui::GetWindowPos();
-		auto delta = ImGui::GetIO().MouseDelta;
-		ImGui::SetWindowPos({pos.x + delta.x, pos.y + delta.y});
-		dragged = true;
+		position.x += io.MouseDelta.x;
+		position.y += io.MouseDelta.y;
+		dragging = true;
 	}
-	if (clicked && !dragged) bot.menuOpen = !bot.menuOpen;
-	if (!active) dragged = false;
+	if (clicked && !dragging) bot.menuOpen = !bot.menuOpen;
+	if (!active) dragging = false;
 
 	ImGui::End();
 	ImGui::PopStyleVar(2);
@@ -225,18 +230,37 @@ void stepperControls() {
 	ImGui::End();
 }
 
-void settings() {
+void noclipSettings() {
 	auto& bot = Bot::get();
-	if (!bot.menuOpen || !settingsOpen) return;
+	if (!bot.menuOpen || !noclipOpen) return;
 
 	ImGui::SetNextWindowPos({120.f, 260.f}, ImGuiCond_FirstUseEver);
-	if (!ImGui::Begin("Noclip", &settingsOpen, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
+	if (!ImGui::Begin("Noclip", &noclipOpen, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
 		ImGui::End();
 		return;
 	}
 
 	ImGui::Checkbox("Player 1", &bot.noclipP1);
 	ImGui::Checkbox("Player 2", &bot.noclipP2);
+
+	ImGui::End();
+}
+
+void modSettings() {
+	auto& bot = Bot::get();
+	if (!bot.menuOpen || !settingsOpen) return;
+
+	ImGui::SetNextWindowPos({140.f, 180.f}, ImGuiCond_FirstUseEver);
+	if (!ImGui::Begin("Settings", &settingsOpen, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
+		ImGui::End();
+		return;
+	}
+
+	bool autoSave = bot.autoSave;
+	if (ImGui::Checkbox("Auto-save", &autoSave)) bot.setAutoSave(autoSave);
+
+	bool overwrite = bot.overwrite;
+	if (ImGui::Checkbox("Overwrite macro", &overwrite)) bot.setOverwrite(overwrite);
 
 	ImGui::End();
 }
@@ -260,7 +284,6 @@ void menu() {
 	static bool ready = false;
 	static bool dirty = true;
 	static std::vector<std::string> files;
-	static std::string status;
 
 	if (!ready) {
 		std::strncpy(nameBuffer, bot.name.c_str(), sizeof(nameBuffer) - 1);
@@ -329,6 +352,10 @@ void menu() {
 		if (locked) ImGui::EndDisabled();
 	}
 
+	float gearSize = ImGui::GetFrameHeight();
+	ImGui::SameLine(ImGui::GetWindowWidth() - gearSize - ImGui::GetStyle().WindowPadding.x);
+	if (gearButton("##mod-settings", gearSize)) settingsOpen = !settingsOpen;
+
 	ImGui::Separator();
 
 	char current[24];
@@ -338,10 +365,10 @@ void menu() {
 		if (value > 0.f) bot.setSpeed(value);
 	}
 
-	std::snprintf(current, sizeof(current), "%d", static_cast<int>(bot.tps));
+	std::snprintf(current, sizeof(current), "%.0f", bot.tps);
 	if (numberField("TPS", tpsBuffer, sizeof(tpsBuffer), current)) {
-		int value = std::atoi(tpsBuffer);
-		if (value > 0) bot.setTps(value);
+		double value = std::strtod(tpsBuffer, nullptr);
+		if (value >= 1.0) bot.setTps(value);
 	}
 
 	bool stepperOn = bot.stepper;
@@ -349,7 +376,7 @@ void menu() {
 
 	ImGui::Checkbox("Noclip", &bot.noclip);
 	ImGui::SameLine();
-	if (gearButton("##noclip-settings", ImGui::GetFrameHeight())) settingsOpen = !settingsOpen;
+	if (gearButton("##noclip-settings", ImGui::GetFrameHeight())) noclipOpen = !noclipOpen;
 
 	if (auto layer = PlayLayer::get()) {
 		ImGui::Text("Frame: %d | Inputs: %zu", layer->m_gameState.m_currentProgress, bot.macro.inputs.size());
@@ -362,14 +389,14 @@ void menu() {
 
 	ImGui::InputText("Name", nameBuffer, sizeof(nameBuffer));
 	if (ImGui::Button("Save")) {
-		bot.name = nameBuffer;
-		status = bot.save(nameBuffer) ? "Saved" : "Save failed";
+		bot.setName(nameBuffer);
+		bot.status = bot.save(nameBuffer) ? "Saved" : "Save failed";
 		dirty = true;
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Load")) {
-		bot.name = nameBuffer;
-		status = bot.load(nameBuffer) ? "Loaded" : "Load failed";
+		bot.setName(nameBuffer);
+		bot.status = bot.load(nameBuffer) ? "Loaded" : "Load failed";
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Refresh")) dirty = true;
@@ -383,7 +410,7 @@ void menu() {
 		ImGui::EndListBox();
 	}
 
-	if (!status.empty()) ImGui::TextUnformatted(status.c_str());
+	if (!bot.status.empty()) ImGui::TextUnformatted(bot.status.c_str());
 
 	lastPos = ImGui::GetWindowPos();
 	lastSize = ImGui::GetWindowSize();
@@ -407,6 +434,7 @@ $on_mod(Loaded) {
 		floatingButton();
 		stepperControls();
 		menu();
-		settings();
+		noclipSettings();
+		modSettings();
 	});
 }
