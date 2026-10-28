@@ -40,7 +40,10 @@ public:
 	bool resetting = false;
 	int pendingSteps = 0;
 	double accumulator = 0.0;
+	bool autoSave = true;
+	bool overwrite = true;
 	std::string name = "macro";
+	std::string status;
 
 	bool inLevel() const;
 	bool vanilla() const;
@@ -49,7 +52,10 @@ public:
 	void restore();
 	void setMode(Mode mode);
 	void setSpeed(float value);
-	void setTps(int value);
+	void setTps(double value);
+	void setName(std::string const& value);
+	void setAutoSave(bool value);
+	void setOverwrite(bool value);
 	void applyAudio();
 	void resetAudio();
 
@@ -61,12 +67,13 @@ public:
 	std::vector<std::string> list() const;
 	bool save(std::string const& file);
 	bool load(std::string const& file);
-	void autosave();
+	void finishSession();
 
 private:
 	size_t m_cursor = 0;
 
 	void press(GJBaseGameLayer* layer, bool down, int button, bool player2);
+	std::string uniqueName(std::string const& base) const;
 };
 
 }

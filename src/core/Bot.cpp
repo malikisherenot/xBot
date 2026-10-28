@@ -27,7 +27,9 @@ float Bot::stepDelta() const {
 void Bot::restore() {
 	auto mod = Mod::get();
 	speed = mod->getSavedValue<float>("speed", 1.f);
-	tps = mod->getSavedValue<float>("tps", 240.f);
+	tps = std::max(1.f, mod->getSavedValue<float>("tps", 240.f));
+	autoSave = mod->getSavedValue<bool>("autosave", true);
+	overwrite = mod->getSavedValue<bool>("overwrite", true);
 	name = mod->getSavedValue<std::string>("name", "macro");
 }
 
@@ -52,9 +54,24 @@ void Bot::setSpeed(float value) {
 	applyAudio();
 }
 
-void Bot::setTps(int value) {
-	tps = static_cast<float>(std::clamp(value, 1, 10000));
+void Bot::setTps(double value) {
+	tps = static_cast<float>(std::max(1.0, value));
 	Mod::get()->setSavedValue("tps", tps);
+}
+
+void Bot::setName(std::string const& value) {
+	name = value;
+	Mod::get()->setSavedValue("name", name);
+}
+
+void Bot::setAutoSave(bool value) {
+	autoSave = value;
+	Mod::get()->setSavedValue("autosave", autoSave);
+}
+
+void Bot::setOverwrite(bool value) {
+	overwrite = value;
+	Mod::get()->setSavedValue("overwrite", overwrite);
 }
 
 void Bot::applyAudio() {
@@ -140,13 +157,38 @@ bool Bot::save(std::string const& file) {
 	}
 
 	macro.tps = tps;
-	Mod::get()->setSavedValue("name", file);
 	return formats::save(path, macro, id, levelName);
 }
 
-void Bot::autosave() {
-	if (mode != Mode::Record || macro.inputs.empty()) return;
-	save(name.empty() ? "macro" : name);
+std::string Bot::uniqueName(std::string const& base) const {
+	auto exists = [&](std::string const& candidate) {
+		std::error_code ec;
+		return std::filesystem::exists(dir() / (candidate + ".gdr"), ec);
+	};
+	if (!exists(base)) return base;
+	for (int i = 1; i < 100000; i++) {
+		auto candidate = base + "_" + std::to_string(i);
+		if (!exists(candidate)) return candidate;
+	}
+	return base;
+}
+
+void Bot::finishSession() {
+	if (mode != Mode::Record) return;
+	mode = Mode::Idle;
+	if (macro.inputs.empty()) return;
+
+	if (!autoSave) {
+		status = "Recording stopped (not saved)";
+		return;
+	}
+
+	std::string base = name.empty() ? "macro" : name;
+	auto path = std::filesystem::path(base);
+	if (path.has_extension()) base = utils::string::pathToString(path.stem());
+	if (!overwrite) base = uniqueName(base);
+
+	status = save(base) ? "Auto-saved: " + base : "Auto-save failed";
 }
 
 bool Bot::load(std::string const& file) {
@@ -158,8 +200,7 @@ bool Bot::load(std::string const& file) {
 	if (!formats::load(path, loaded)) return false;
 
 	macro = std::move(loaded);
-	setTps(static_cast<int>(macro.tps));
-	Mod::get()->setSavedValue("name", file);
+	setTps(macro.tps);
 
 	if (auto layer = PlayLayer::get()) {
 		rewind(layer->m_gameState.m_currentProgress);
