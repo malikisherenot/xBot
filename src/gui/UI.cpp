@@ -321,9 +321,12 @@ void menu() {
 	for (int i = 0; i < 3; i++) {
 		if (i > 0) ImGui::SameLine();
 		bool active = static_cast<int>(bot.mode) == i;
+		bool locked = i == 0 && bot.mode == Mode::Record;
+		if (locked) ImGui::BeginDisabled();
 		if (active) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-		if (ImGui::Button(labels[i])) bot.setMode(static_cast<Mode>(i));
+		if (ImGui::Button(labels[i]) && !active) bot.setMode(static_cast<Mode>(i));
 		if (active) ImGui::PopStyleColor();
+		if (locked) ImGui::EndDisabled();
 	}
 
 	ImGui::Separator();
