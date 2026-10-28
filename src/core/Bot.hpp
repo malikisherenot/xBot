@@ -38,6 +38,7 @@ public:
 	bool noclipP2 = true;
 	bool injecting = false;
 	bool restart = false;
+	bool resetting = false;
 	int pendingSteps = 0;
 	double accumulator = 0.0;
 	std::string name = "macro";
@@ -61,6 +62,7 @@ public:
 	std::vector<std::string> list() const;
 	bool save(std::string const& file);
 	bool load(std::string const& file);
+	void autosave();
 
 private:
 	size_t m_cursor = 0;

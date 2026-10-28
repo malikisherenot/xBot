@@ -159,6 +159,11 @@ bool Bot::save(std::string const& file) {
 	return formats::save(path, macro, id, levelName);
 }
 
+void Bot::autosave() {
+	if (mode != Mode::Record || macro.inputs.empty()) return;
+	save(name.empty() ? "macro" : name);
+}
+
 bool Bot::load(std::string const& file) {
 	if (file.empty()) return false;
 	auto path = dir() / file;
