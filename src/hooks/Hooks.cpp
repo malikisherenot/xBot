@@ -60,10 +60,10 @@ class $modify(XGameLayer, GJBaseGameLayer) {
 		while (done < steps) {
 			GJBaseGameLayer::update(step);
 			done++;
-			if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(16)) break;
+			if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(50)) break;
 		}
 
-		bot.accumulator = done < steps ? 0.0 : std::max(0.0, total - done * static_cast<double>(step));
+		bot.accumulator = std::clamp(total - done * static_cast<double>(step), 0.0, 1.0);
 	}
 
 	double getModifiedDelta(float dt) {
@@ -150,19 +150,19 @@ class $modify(XPlayLayer, PlayLayer) {
 
 	void onQuit() {
 		auto& bot = Bot::get();
-		bot.autosave();
+		bot.finishSession();
 		bot.resetAudio();
 		xbot::practice::clear();
 		PlayLayer::onQuit();
 	}
 
 	void levelComplete() {
-		Bot::get().autosave();
+		Bot::get().finishSession();
 		PlayLayer::levelComplete();
 	}
 
 	void togglePracticeMode(bool practice) {
-		if (!practice) Bot::get().autosave();
+		if (!practice) Bot::get().finishSession();
 		PlayLayer::togglePracticeMode(practice);
 	}
 
