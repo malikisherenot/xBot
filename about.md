@@ -20,8 +20,14 @@ Recordings are saved automatically when you leave practice mode, quit or finish 
 | `.gdr` / `.gdr2` (xdBot, Mega Hack, Eclipse, Echo, and others) | yes | yes |
 | `.txt` (`frame down [player2] [button]`, optional first line = TPS) | yes | no |
 | `.slc` (Silicate, versions 2 and 3) | yes | no |
+| `.xd` (older xdBot) | yes | no |
+| `.mhr` and `.json` (Mega Hack) | yes | no |
+| `.echo` (Echo, all versions) | yes | no |
+| `.json` (TASBot) | yes | no |
 
 Macros live in `geode/game` inside the game directory.
+
+If a macro from another bot fires a frame too early or late, use **Frame offset** in Settings.
 
 ## Controls
 

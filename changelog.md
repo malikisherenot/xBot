@@ -1,7 +1,8 @@
 # v1.2.0
 
 - Much better recording and replay accuracy, including practice mode checkpoints
-- Added loading of Silicate `.slc` macros (versions 2 and 3)
+- Added loading of macros from other bots: Silicate `.slc` (versions 2 and 3), xdBot `.xd`, Mega Hack `.mhr` and `.json`, Echo `.echo` and TASBot `.json`
+- Added a Frame offset setting to line up macros from other bots
 - Recordings are now saved automatically when you leave practice mode, quit or finish a level
 - Added Settings (gear icon next to the mode buttons) with Auto-save and Overwrite macro
 - Stopping a recording no longer clears the macro
