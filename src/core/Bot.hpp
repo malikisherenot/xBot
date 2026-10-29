@@ -30,6 +30,7 @@ public:
 	Macro macro;
 	float speed = 1.f;
 	float tps = 240.f;
+	int frameOffset = 0;
 	bool frozen = false;
 	bool menuOpen = false;
 	bool stepper = false;
@@ -54,6 +55,7 @@ public:
 	void setSpeed(float value);
 	void setTps(double value);
 	void setName(std::string const& value);
+	void setFrameOffset(int value);
 	void setAutoSave(bool value);
 	void setOverwrite(bool value);
 	void applyAudio();

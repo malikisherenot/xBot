@@ -29,6 +29,7 @@ void Bot::restore() {
 	speed = mod->getSavedValue<float>("speed", 1.f);
 	tps = std::max(1.f, mod->getSavedValue<float>("tps", 240.f));
 	autoSave = mod->getSavedValue<bool>("autosave", true);
+	frameOffset = mod->getSavedValue<int>("frameoffset", 0);
 	overwrite = mod->getSavedValue<bool>("overwrite", true);
 	name = mod->getSavedValue<std::string>("name", "macro");
 }
@@ -62,6 +63,11 @@ void Bot::setTps(double value) {
 void Bot::setName(std::string const& value) {
 	name = value;
 	Mod::get()->setSavedValue("name", name);
+}
+
+void Bot::setFrameOffset(int value) {
+	frameOffset = std::clamp(value, -1000, 1000);
+	Mod::get()->setSavedValue("frameoffset", frameOffset);
 }
 
 void Bot::setAutoSave(bool value) {
@@ -105,8 +111,9 @@ void Bot::rewind(uint32_t frame) {
 		}
 		return;
 	}
+	auto target = static_cast<uint32_t>(std::max<int64_t>(0, static_cast<int64_t>(frame) - frameOffset));
 	auto it = std::lower_bound(
-		inputs.begin(), inputs.end(), frame,
+		inputs.begin(), inputs.end(), target,
 		[](Input const& input, uint32_t value) { return input.frame < value; }
 	);
 	m_cursor = static_cast<size_t>(it - inputs.begin());
@@ -118,8 +125,10 @@ void Bot::press(GJBaseGameLayer* layer, bool down, int button, bool player2) {
 
 void Bot::inject(GJBaseGameLayer* layer, uint32_t frame) {
 	auto& inputs = macro.inputs;
+	int64_t current = static_cast<int64_t>(frame) - frameOffset;
+	if (current < 0) return;
 
-	while (m_cursor < inputs.size() && inputs[m_cursor].frame <= frame) {
+	while (m_cursor < inputs.size() && static_cast<int64_t>(inputs[m_cursor].frame) <= current) {
 		auto const& input = inputs[m_cursor++];
 		press(layer, input.down, input.button, input.player2);
 	}
