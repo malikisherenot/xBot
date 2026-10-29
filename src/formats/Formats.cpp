@@ -1,4 +1,5 @@
 #include "Formats.hpp"
+#include "Bots.hpp"
 #include "Slc.hpp"
 
 #include <gdr/gdr.hpp>
@@ -134,13 +135,31 @@ bool loadSlc(std::filesystem::path const& path, xbot::Macro& out) {
 	return !out.inputs.empty();
 }
 
+bool loadBots(std::filesystem::path const& path, xbot::Macro& out) {
+	std::vector<uint8_t> data;
+	if (!readBytes(path, data)) return false;
+
+	xbot::bots::Replay replay;
+	if (!xbot::bots::parse(data, extensionOf(path), replay)) return false;
+
+	out.tps = replay.fps > 0.0 ? static_cast<float>(replay.fps) : 240.f;
+	out.inputs.clear();
+	for (auto const& click : replay.clicks) {
+		if (click.frame >= UINT32_MAX) continue;
+		out.inputs.push_back({static_cast<uint32_t>(click.frame), click.button, click.down, click.player2});
+	}
+	finalize(out);
+	return !out.inputs.empty();
+}
+
 }
 
 namespace xbot::formats {
 
 bool supported(std::filesystem::path const& path) {
 	auto ext = extensionOf(path);
-	return ext == ".gdr" || ext == ".gdr2" || ext == ".txt" || ext == ".slc";
+	return ext == ".gdr" || ext == ".gdr2" || ext == ".txt" || ext == ".slc" || ext == ".xd" || ext == ".mhr" ||
+		ext == ".echo" || ext == ".json";
 }
 
 bool load(std::filesystem::path const& path, Macro& out) {
@@ -148,6 +167,8 @@ bool load(std::filesystem::path const& path, Macro& out) {
 	if (ext == ".gdr" || ext == ".gdr2") return loadGdr(path, out);
 	if (ext == ".txt") return loadText(path, out);
 	if (ext == ".slc") return loadSlc(path, out);
+	if (ext == ".xd" || ext == ".mhr" || ext == ".echo") return loadBots(path, out);
+	if (ext == ".json") return loadBots(path, out) || loadGdr(path, out);
 	return false;
 }
 
