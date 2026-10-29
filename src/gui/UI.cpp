@@ -262,6 +262,14 @@ void modSettings() {
 	bool overwrite = bot.overwrite;
 	if (ImGui::Checkbox("Overwrite macro", &overwrite)) bot.setOverwrite(overwrite);
 
+	static char offsetBuffer[16] = {};
+	char currentOffset[16];
+	std::snprintf(currentOffset, sizeof(currentOffset), "%d", bot.frameOffset);
+	if (numberField("Frame offset", offsetBuffer, sizeof(offsetBuffer), currentOffset)) {
+		bot.setFrameOffset(static_cast<int>(std::strtol(offsetBuffer, nullptr, 10)));
+	}
+	ImGui::TextDisabled("Replay timing: + later, - earlier");
+
 	ImGui::End();
 }
 
