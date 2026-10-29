@@ -100,6 +100,8 @@ bool loadText(std::filesystem::path const& path, xbot::Macro& out) {
 	return !out.inputs.empty();
 }
 
+constexpr uint32_t SlcFrameShift = 1;
+
 bool loadSlc(std::filesystem::path const& path, xbot::Macro& out) {
 	std::vector<uint8_t> data;
 	if (!readBytes(path, data)) return false;
@@ -116,14 +118,14 @@ bool loadSlc(std::filesystem::path const& path, xbot::Macro& out) {
 			newAttempt = true;
 			continue;
 		}
-		if (action.type < 1 || action.type > 3 || action.frame > UINT32_MAX) continue;
+		if (action.type < 1 || action.type > 3 || action.frame >= UINT32_MAX) continue;
 
 		if (newAttempt) {
 			out.inputs.clear();
 			newAttempt = false;
 		}
 
-		auto frame = static_cast<uint32_t>(action.frame);
+		auto frame = static_cast<uint32_t>(action.frame) + SlcFrameShift;
 		while (!out.inputs.empty() && out.inputs.back().frame > frame) {
 			out.inputs.pop_back();
 		}
